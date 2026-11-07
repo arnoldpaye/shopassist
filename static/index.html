@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShopAssist</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, sans-serif;
+      color: #202124;
+      background: #f5f6f8;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+    }
+
+    main {
+      width: min(100%, 42rem);
+      height: min(44rem, calc(100vh - 2rem));
+      min-height: 24rem;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #e1e4e8;
+      border-radius: 1rem;
+      background: white;
+      box-shadow: 0 0.75rem 2rem #20212412;
+    }
+
+    header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #e1e4e8;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    header p {
+      margin: 0.25rem 0 0;
+      color: #5f6368;
+      font-size: 0.9rem;
+    }
+
+    #messages {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      overflow-y: auto;
+      padding: 1rem 1.25rem;
+    }
+
+    .message {
+      max-width: 85%;
+      margin: 0;
+      padding: 0.7rem 0.9rem;
+      border-radius: 1rem;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .token-usage {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    .assistant {
+      align-self: flex-start;
+      background: #f0f2f5;
+    }
+
+    .user {
+      align-self: flex-end;
+      background: #2563eb;
+      color: white;
+    }
+
+    form {
+      display: flex;
+      gap: 0.6rem;
+      padding: 1rem 1.25rem;
+      border-top: 1px solid #e1e4e8;
+    }
+
+    input {
+      min-width: 0;
+      flex: 1;
+      padding: 0.75rem 0.9rem;
+      border: 1px solid #c9cdd2;
+      border-radius: 0.6rem;
+      font: inherit;
+    }
+
+    button {
+      padding: 0.75rem 1rem;
+      border: 0;
+      border-radius: 0.6rem;
+      background: #2563eb;
+      color: white;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    @media (max-width: 30rem) {
+      main {
+        height: calc(100vh - 2rem);
+      }
+
+      form {
+        padding: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>ShopAssist</h1>
+      <p>How can we help with your order?</p>
+    </header>
+    <section id="messages" aria-live="polite" aria-label="Chat messages">
+      <p class="message assistant">Hi! Ask me a question about our store.</p>
+    </section>
+    <form id="chat-form">
+      <input id="message-input" name="text" type="text" placeholder="Type your message…" autocomplete="off" required>
+      <button id="send-button" type="submit">Send</button>
+    </form>
+  </main>
+  <script>
+    const form = document.querySelector("#chat-form");
+    const input = document.querySelector("#message-input");
+    const messages = document.querySelector("#messages");
+    const sendButton = document.querySelector("#send-button");
+
+    function addMessage(text, role, inputTokens) {
+      const message = document.createElement("p");
+      message.className = `message ${role}`;
+      message.textContent = text;
+      if (inputTokens !== undefined) {
+        const usage = document.createElement("span");
+        usage.className = "token-usage";
+        usage.textContent = `Input tokens: ${inputTokens}`;
+        message.append(usage);
+      }
+      messages.append(message);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+
+      addMessage(text, "user");
+      input.value = "";
+      input.disabled = true;
+      sendButton.disabled = true;
+
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        if (!response.ok) {
+          throw new Error(`Request failed (${response.status}). Please try again.`);
+        }
+        const data = await response.json();
+        if (typeof data.reply !== "string" || !Number.isInteger(data.input_tokens)) {
+          throw new Error("The server returned an unexpected response.");
+        }
+        addMessage(data.reply, "assistant", data.input_tokens);
+      } catch (error) {
+        addMessage(error.message || "Unable to send your message. Please try again.", "assistant");
+      } finally {
+        input.disabled = false;
+        sendButton.disabled = false;
+        input.focus();
+      }
+    });
+  </script>
+</body>
+</html>
