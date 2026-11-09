@@ -7,9 +7,9 @@ client = Anthropic()
 
 MODEL = "claude-sonnet-5-5"
 SYSTEM = (
-    "You are ShopAssist, an online store's support assistant."
-    "Returns are accepted within 30 days of delivery."
-    "Answer in one or two sentences."
+    "You are ShopAssist, an online store's support assistant. "
+    "Returns are accepted within 30 days of delivery. "
+    "Answer in one or two sentence."
 )
 
 ORDERS = {
@@ -17,15 +17,13 @@ ORDERS = {
         "item": "jacket",
         "status": "delivered",
         "delivered_days_ago": 20,
-    }
+    },
 }
 
 TOOLS = [
     {
         "name": "lookup_order",
-            "description": "Look up an order by its ID. Returns the "
-            "item, the status and how many days ago "
-            "it was delivered.",
+        "description": "Look up an order by its ID. Returns the item, the status and how many days ago it was delivered.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -35,24 +33,26 @@ TOOLS = [
                 }
             },
             "required": ["order_id"],
-        }
+        },
     }
 ]
 
 def lookup_order(order_id):
-    return ORDERS.get(order_id, {"error", "order not found"})
+    return ORDERS.get(order_id, {"error": "order not found"})
 
 # print(lookup_order("ORD-12345678"))
 # print(lookup_order("ORD-00000000"))
 
-messages =[{
-    "role": "user",
-    "content": "Can I still return the jacket from order ORD-12345678?"    
-}]
+messages = [
+    {
+        "role": "user",
+        "content": "Can I still return the jacket from order ORD-12345678?"
+    }
+]
 
 response = client.messages.create(
     model=MODEL,
-    max_tokens=200,
+    max_tokens=300,
     output_config={"effort": "low"},
     system=SYSTEM,
     tools=TOOLS,
@@ -69,9 +69,13 @@ for block in response.content:
         messages.append(
             {"role": "assistant", "content": response.content}
         )
-        messages.append({"role": "user", "content": [
-            {"type": "tool_result", "tool_use_id": block.id, "content": json.dumps(result)}
-        ]})
+        messages.append(
+            {
+                "role": "user", "content": [
+                    {"type": "tool_result", "tool_use_id": block.id, "content": json.dumps(result)}
+                ] 
+            }
+        )
 
 final = client.messages.create(
     model=MODEL,
