@@ -10,7 +10,10 @@ MODEL = "claude-sonnet-5-5"
 SCHEMA = {
     "type": "object",
     "properties": {
-        "order_id": {"type": ["string", "null"], "description": "null if there is no order number"},
+        "order_id": {
+            "type": ["string", "null"],
+            "description": "null if there is no order number",
+        },
         "item": {"type": "string"},
         "reason": {
             "type": "string",
@@ -32,7 +35,6 @@ def ask_claude(messages):
         if block.type == "text":
             return block.text
 
-
 def is_valid(order_id):
     if order_id is None:
         return True
@@ -40,17 +42,18 @@ def is_valid(order_id):
         return True
     return False
 
-
 def extract(email):
-    prompt = ("Extract the return request from this customer email.\n\n" + email)
-    messages = [{"role": "user", "content": prompt}]
+    prompt = ("Extract the return request from this customer email\n\n" + email)
+    messages = [
+        {"role": "user", "content": prompt}
+    ]
     for attempt in [1, 2, 3]:
         text = ask_claude(messages)
         data = json.loads(text)
         order_id = data["order_id"]
         if is_valid(order_id):
             return data
-        error = order_id + "is not a valid order ID"
+        error = order_id + " is not a valid order ID"
         print(" attempt", attempt, "rejected:", error)
         messages.append({"role": "assistant", "content": text})
         feedback = error + ". Fix it, or use null."
@@ -58,12 +61,9 @@ def extract(email):
     return None
 
 EMAILS = [
-    "Hi, I want to return the blue jacket from order "
-    "ORD-12345678, It arrived last week but it is too small. Alex",
-    "Hello, the shoes I got are damaged. Please tell me how "
-    "to send them back. Thanks, Sam",
-    "The headphones from order ORD-7788 stopped working after "
-    "two days. I want a return. Kim"
+    "Hi, I want to return the blue jacket form order ORD-12345678. It arrived last week but it is too small. Alex",
+    "Hello, the shoes I got are damaged. Please tell me how to send them back. Thanks, Sam",
+    "The headphones from ORD-7788 stopped working after two days. I want a return. Kim",
 ]
 
 if __name__ == "__main__":
